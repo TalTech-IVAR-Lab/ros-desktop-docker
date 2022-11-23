@@ -35,7 +35,7 @@ docker run -d \
   --name=ros-desktop \
   -e PUID=1000 \
   -e PGID=1000 \
-  -e TZ=Europe/London \
+  -e TZ=Europe/Tallinn \
   -p 3389:3389 `#rdp` \
   -p 2222:22 `#ssh` \
   -p 10000:10000 `#ros master node` \
