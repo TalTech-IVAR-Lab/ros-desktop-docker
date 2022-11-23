@@ -14,10 +14,10 @@ Dockerized ROS Desktop environment for development and experimentation used by [
 In addition to what is already in [taltechivarlab/ubuntu-desktop:20.04][ubuntu_desktop_github], this image adds modifications required for ROS development:
 
 - Full [ROS Noetic Desktop][ros_noetic] installation
-- Preconfigured empty [catkin] workspace at `/config/ros/ws_ivar`
+- Preconfigured empty [catkin] workspace at `/config/ros/ws_ivar_lab`
 - Updated `.bashrc` and `.zshrc` (for the default _abc_ user):
   - ROS is sourced automatically
-  - Default workspace (`ws_ivar`) is sourced automatically
+  - Default workspace (`ws_ivar_lab`) is sourced automatically
   - Predefined environment variables:
     - `ROS_WS_NAME="ws_ivar_lab"`
     - `ROS_WS_PATH="/config/ros/ws_ivar_lab"`
