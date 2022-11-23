@@ -59,9 +59,9 @@ After that, you can use login _abc_ and the newly set password to login to the c
 
 > 💡 If you intend to connect to your ROS nodes from outside this container, you will likely need to open more ports.
 > 
-> The port mappings are specified with the initial `docker run` call, but you cannot delete and recreate the container without losing the data inside. Instead, please follow this [answer from Stackoverflow][update_docker_port_in_flight_stackoverflow] or this [article][update_docker_port_in_flight] to modify the port mappings of already running container without destroying it.
+> The port mappings are specified with the initial `docker run` call, and you cannot delete and recreate the container without losing the data inside. Instead, please follow [this answer from Stackoverflow][update_docker_port_in_flight_stackoverflow] or [this article][update_docker_port_in_flight] to modify the port mappings of already running container without destroying it.
 > 
-> Alternatively, you can start the container with `--network host` flag. This will make all ports of the container available to the host network, but [only works on Linux hosts][docker_network_host].
+> Alternatively, you can run the container with `--network=host` flag. This will make all ports of the container available to the host network, but [only works on Linux hosts][docker_network_host].
 
 ## Building locally
 
