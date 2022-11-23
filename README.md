@@ -87,7 +87,7 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [rdesktop_github_hardware_acceleration]: https://github.com/linuxserver/docker-rdesktop#hardware-acceleration-ubuntu-container-only
 [Dockerhub]: https://hub.docker.com/
 [docker_buildx]: https://www.docker.com/blog/how-to-rapidly-build-multi-architecture-images-with-buildx/#
-[dockerfile]: https://raw.githubusercontent.com/TalTech-IVAR-Lab/ros-desktop-docker/main/Dockerfile
+[dockerfile]: https://github.com/TalTech-IVAR-Lab/ros-desktop-docker/blob/main/Dockerfile
 [docker_stop]: https://docs.docker.com/engine/reference/commandline/stop/
 [docker_start]: https://docs.docker.com/engine/reference/commandline/start/
 [docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
