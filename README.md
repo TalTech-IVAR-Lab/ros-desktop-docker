@@ -2,8 +2,8 @@
 
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
 [![ROS version](https://img.shields.io/badge/ROS-noetic-informational?logo=ros)](http://wiki.ros.org/noetic)
-[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ros-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ros-desktop-docker/Docker%20Build?logo=github)](https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/actions)
+[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ros-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ubuntu-desktop)
 
 > Based on the [taltechivarlab/ubuntu-desktop:20.04][ubuntu_desktop_github] image by [TalTech IVAR Lab][taltech_ivar_lab_github]
 
