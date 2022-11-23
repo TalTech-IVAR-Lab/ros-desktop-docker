@@ -57,7 +57,11 @@ After that, you can use login _abc_ and the newly set password to login to the c
 
 > ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data. It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
 
-> 💡 If you intend to connect to your ROS nodes from outside this container, you will likely need to open more ports. The port mappings are specified with the initial `docker run` call, but you cannot delete and recreate the container without losing the data inside. Instead, please follow this [answer from Stackoverflow][update_docker_port_in_flight_stackoverflow] or this [article][update_docker_port_in_flight] to modify the port mappings of already running container without destroying it.
+> 💡 If you intend to connect to your ROS nodes from outside this container, you will likely need to open more ports.
+> 
+> The port mappings are specified with the initial `docker run` call, and you cannot delete and recreate the container without losing the data inside. Instead, please follow [this answer from Stackoverflow][update_docker_port_in_flight_stackoverflow] or [this article][update_docker_port_in_flight] to modify the port mappings of already running container without destroying it.
+> 
+> Alternatively, you can run the container with `--network=host` flag. This will make all ports of the container available to the host network, but [only works on Linux hosts][docker_network_host].
 
 ## Building locally
 
@@ -89,3 +93,4 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [docker_rm]: https://docs.docker.com/engine/reference/commandline/rm/
 [update_docker_port_in_flight]: https://www.baeldung.com/linux/assign-port-docker-container#reconfigure-docker-in-flight
 [update_docker_port_in_flight_stackoverflow]: https://stackoverflow.com/a/38783433
+[docker_network_host]: https://docs.docker.com/network/host/
