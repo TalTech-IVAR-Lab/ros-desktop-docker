@@ -56,6 +56,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: taltechivarlab/ubuntu-desktop
+          repository: taltechivarlab/ros-desktop
           readme-filepath: ./README.md
           short-description: ${{ github.event.repository.description }}
