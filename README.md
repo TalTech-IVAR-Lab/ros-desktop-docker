@@ -42,7 +42,7 @@ docker run -d \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \
-  -e NVIDIA_VISIBLE_DEVICES=all taltechivarlab/ros-desktop:noetic
+  taltechivarlab/ros-desktop:noetic
 ```
 
 Once the container has started, you must `ssh` into it (default password is `abc`):
