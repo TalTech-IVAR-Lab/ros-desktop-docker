@@ -38,8 +38,8 @@ ENV RC_FILE_PATCHES_PATH="${HOME}/rc_file_patches"
 COPY files/rc_file_patches/ ${RC_FILE_PATCHES_PATH}
 
 # Add command to source ROS to .zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.zsh >> ${RC_FILE_PATCHES_PATH}/.zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.bash >> ${RC_FILE_PATCHES_PATH}/.bashrc
+RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.zsh >> ${HOME}/.zshrc
+RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.bash >> ${HOME}/.bashrc
 
 # Create a default ROS workspace
 ENV ROS_WS_NAME="ws_ivar_lab"
@@ -51,8 +51,8 @@ RUN catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYP
 RUN catkin build
 
 # Add command to source the default workspace to .zshrc and .bashrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.zsh >> ${RC_FILE_PATCHES_PATH}/.zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.bash >> ${RC_FILE_PATCHES_PATH}/.bashrc
+RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.zsh >> ${HOME}/.zshrc
+RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.bash >> ${HOME}/.bashrc
 
 # Clean up .*rc patch files
 RUN rm -rf ${RC_FILE_PATCHES_PATH}
