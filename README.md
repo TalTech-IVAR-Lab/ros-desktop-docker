@@ -40,9 +40,9 @@ docker run -d \
   -e PUID=1000 \
   -e PGID=1000 \
   -e TZ=Europe/Tallinn \
-  -p 3389:3389 `#rdp` \
-  -p 2222:2222 `#ssh` \
-  -p 10000:10000 `#ros master node` \
+  -p 3389:3389 `# rdp` \
+  -p 2222:2222 `# ssh` \
+  -p 10000:10000 `# ros master node` \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \
@@ -57,15 +57,23 @@ ssh abc@localhost -p 2222
 
 ...and change _abc_ user's default password following the displayed instructions.
 
-After that, you can use login _abc_ and the newly set password to login to the container using any remote desktop client.
+After that, you can use login _abc_ and the newly set password to log in to the container using any remote desktop client.
 
-> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data. It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+> 💡 When inside the container, you can switch your default shell to [Zsh][presto-prezto_demo] by running the following
+> command in the terminal:
+>
+> ```bash
+> sudo usermod --shell $(command -v zsh) abc
+> ```
 
-> 💡 If you intend to connect to your ROS nodes from outside this container, you will likely need to open more ports.
-> 
-> The port mappings are specified with the initial `docker run` call, and you cannot delete and recreate the container without losing the data inside. Instead, please follow [this answer from Stackoverflow][update_docker_port_in_flight_stackoverflow] or [this article][update_docker_port_in_flight] to modify the port mappings of already running container without destroying it.
-> 
-> Alternatively, you can run the container with `--network=host` flag. This will make all ports of the container available to the host network, but [only works on Linux hosts][docker_network_host].
+> ☝ You can [stop][docker_stop] and [restart][docker_start] the created container from Docker without losing your data.
+> It is equivalent to system shutdown from the containerized Ubuntu's point of view. However, keep in mind that [_deleting_][docker_rm] your container will destroy all the data and software contained inside.
+
+> 💡 If you intend to connect to your ROS nodes from outside this container, you will likely need to open more ports. To learn how to do that, refer to the advanced usage section below.
+
+### Advanced usage
+
+For more advanced use cases, such as opening additional ports and enabling hardware graphics acceleration, please refer to the [Advanced Usage][docs_advanced_usage] doc.
 
 ## Building locally
 
@@ -99,4 +107,5 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [update_docker_port_in_flight_stackoverflow]: https://stackoverflow.com/a/38783433
 [docker_network_host]: https://docs.docker.com/network/host/
 
-[docs_motivation]: docs/MOTIVATION.md
+[docs_motivation]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/docs/MOTIVATION.md
+[docs_advanced_usage]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/docs/ADVANCED_USAGE.md
