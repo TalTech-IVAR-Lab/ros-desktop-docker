@@ -89,6 +89,10 @@ In case you want to build a multi-architecture image (e.g. to run it on a Raspbe
 docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-desktop:noetic --output=oci .
 ```
 
+## Contributing
+
+The project is in early stages of development, so we are not yet accepting contributions from outside our university organization. 
+
 
 [taltech_ivar_lab]: https://ivar.taltech.ee/
 [ubuntu_desktop_github]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker
