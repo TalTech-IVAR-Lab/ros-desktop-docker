@@ -9,6 +9,10 @@
 
 Dockerized ROS Desktop environment for development and experimentation used by [TalTech IVAR Lab][taltech_ivar_lab].
 
+## Why and how
+
+Learn why this project was created and how it is useful by reading our [Motivation doc][docs_motivation].
+
 ## What's included
 
 In addition to what is already in [taltechivarlab/ubuntu-desktop:20.04][ubuntu_desktop_github], this image adds modifications required for ROS development:
@@ -94,3 +98,5 @@ docker buildx build --platform=linux/amd64,linux/arm64 -t taltechivarlab/ros-des
 [update_docker_port_in_flight]: https://www.baeldung.com/linux/assign-port-docker-container#reconfigure-docker-in-flight
 [update_docker_port_in_flight_stackoverflow]: https://stackoverflow.com/a/38783433
 [docker_network_host]: https://docs.docker.com/network/host/
+
+[docs_motivation]: docs/MOTIVATION.md
