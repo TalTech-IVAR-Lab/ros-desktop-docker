@@ -32,7 +32,7 @@ For the full list of preinstalled ROS packages please refer to this repo's [Dock
 
 ## Usage
 
-To launch the container directly:
+Once you have [installed Docker][docs_install_docker], to launch the container directly:
 
 ```bash
 docker run -d \
@@ -113,3 +113,4 @@ The project is in early stages of development, so we are not yet accepting contr
 
 [docs_motivation]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/docs/MOTIVATION.md
 [docs_advanced_usage]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/docs/ADVANCED_USAGE.md
+[docs_install_docker]: https://github.com/TalTech-IVAR-Lab/ubuntu-desktop-docker/blob/main/docs/INSTALLING_DOCKER.md
