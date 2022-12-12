@@ -42,7 +42,7 @@ docker run -d \
   -e TZ=Europe/Tallinn \
   -p 3390:3390 `# rdp` \
   -p 2222:2222 `# ssh` \
-  -p 10000:10000 `# ros master node` \
+  -p 11311:11311 `# ros master node` \
   --shm-size="1gb" \
   --security-opt seccomp=unconfined \
   --restart unless-stopped \
