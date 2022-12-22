@@ -2,7 +2,7 @@
 
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04-informational?logo=ubuntu)](https://releases.ubuntu.com/focal/)
 [![ROS version](https://img.shields.io/badge/ROS-noetic-informational?logo=ros)](http://wiki.ros.org/noetic)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/TalTech-IVAR-Lab/ros-desktop-docker/Docker%20Build?logo=github)](https://github.com/TalTech-IVAR-Lab/ros-desktop-docker/actions)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ros-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ros-desktop-docker/actions)
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ros-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ros-desktop)
 
 > Based on the [taltechivarlab/ubuntu-desktop:20.04][ubuntu_desktop_github] image by [TalTech IVAR Lab][taltech_ivar_lab_github]
@@ -31,6 +31,8 @@ In addition to what is already in [taltechivarlab/ubuntu-desktop:20.04][ubuntu_d
 For the full list of preinstalled ROS packages please refer to this repo's [Dockerfile].
 
 ## Usage
+
+### Quick start
 
 Once you have [installed Docker][docs_install_docker], to launch the container directly:
 
