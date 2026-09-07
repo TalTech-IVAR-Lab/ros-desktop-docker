@@ -34,6 +34,15 @@ WORKSPACE_INIT = (
 
 
 class RosImageContractTests(unittest.TestCase):
+    def test_dockerfile_frontend_is_digest_pinned(self) -> None:
+        expected = (
+            "# syntax=docker/dockerfile:1.7@"
+            "sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e"
+        )
+
+        for path in (DOCKERFILE, ROOT / "Dockerfile_Noetic"):
+            self.assertEqual(path.read_text().splitlines()[0], expected)
+
     def run_workspace_init(self, config_root: Path) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -164,6 +173,25 @@ class RosImageContractTests(unittest.TestCase):
             noetic,
         )
         self.assertIn("FROM ${BASE_IMAGE}", noetic)
+
+    def test_noetic_pairs_private_xkbcommon_with_matching_x11_library(self) -> None:
+        content = (ROOT / "Dockerfile_Noetic").read_text()
+
+        self.assertIn("FROM ${BASE_IMAGE} AS xkbcommon_x11_builder", content)
+        self.assertIn("ARG LIBXKBCOMMON_VERSION=1.5.0", content)
+        self.assertIn(
+            "sha256:560f11c4bbbca10f495f3ef7d3a6aa4ca62b4f8fb0b52e7d459d18a26e46e017",
+            content,
+        )
+        self.assertIn("-Denable-x11=true", content)
+        self.assertIn(
+            "/opt/selkies-xkbcommon/lib/libxkbcommon-x11.so.0.0.0", content
+        )
+        self.assertNotIn(
+            "COPY --from=xkbcommon_x11_builder "
+            "/tmp/libxkbcommon-build/libxkbcommon.so",
+            content,
+        )
 
     def test_ros2_repository_setup_is_keyring_bound_and_vendored(self) -> None:
         content = DOCKERFILE.read_text()
@@ -421,6 +449,13 @@ class RosImageContractTests(unittest.TestCase):
         )
         self.assertIn(
             "/var/lib/taltech-desktop/ssh/ssh_host_ed25519_key.pub", smoke
+        )
+        self.assertIn('xdpyinfo -display "${DISPLAY:-:1}"', smoke)
+        self.assertIn('dpkg --print-architecture', smoke)
+        self.assertIn('linux/amd64) expected_arch=amd64', smoke)
+        self.assertIn('linux/arm64) expected_arch=arm64', smoke)
+        self.assertIn(
+            "check_ros_communication\nwait_for_display\ncheck_rviz_stability", smoke
         )
 
     def test_ci_promotes_only_after_all_candidates_pass(self) -> None:

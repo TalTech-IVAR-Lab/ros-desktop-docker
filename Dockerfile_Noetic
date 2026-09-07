@@ -1,6 +1,43 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
 ARG BASE_IMAGE=taltechivarlab/ubuntu-desktop:20.04
+
+# The Focal compatibility base provides private libxkbcommon 1.5 for Selkies,
+# but deliberately builds it without the X11 companion. Focal's older system
+# libxkbcommon-x11 is not ABI-compatible with that private core library, which
+# makes Qt/XCB applications such as RViz crash during keyboard initialization.
+FROM ${BASE_IMAGE} AS xkbcommon_x11_builder
+
+ARG LIBXKBCOMMON_VERSION=1.5.0
+
+ADD --checksum=sha256:560f11c4bbbca10f495f3ef7d3a6aa4ca62b4f8fb0b52e7d459d18a26e46e017 \
+    https://xkbcommon.org/download/libxkbcommon-${LIBXKBCOMMON_VERSION}.tar.xz \
+    /tmp/libxkbcommon.tar.xz
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      bison \
+      build-essential \
+      libxcb-xkb-dev \
+      meson \
+      ninja-build \
+      pkg-config; \
+    mkdir -p /tmp/libxkbcommon-src; \
+    tar -xJf /tmp/libxkbcommon.tar.xz \
+      -C /tmp/libxkbcommon-src --strip-components=1; \
+    PKG_CONFIG_PATH=/opt/selkies-xkbcommon/lib/pkgconfig \
+      meson setup /tmp/libxkbcommon-build /tmp/libxkbcommon-src \
+        --prefix=/opt/selkies-xkbcommon \
+        --libdir=lib \
+        --buildtype=release \
+        -Denable-tools=false \
+        -Denable-x11=true \
+        -Denable-docs=false \
+        -Denable-wayland=false \
+        -Denable-xkbregistry=false; \
+    ninja -C /tmp/libxkbcommon-build
+
 FROM ${BASE_IMAGE}
 
 ARG BUILD_DATE
@@ -51,6 +88,15 @@ RUN . /etc/os-release && \
     runuser -u "${DESKTOP_USER}" -- env HOME=/config rosdep update --include-eol-distros && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY --from=xkbcommon_x11_builder \
+    /tmp/libxkbcommon-build/libxkbcommon-x11.so.0.0.0 \
+    /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so.0.0.0
+
+RUN ln -sf libxkbcommon-x11.so.0.0.0 \
+      /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so.0 && \
+    ln -sf libxkbcommon-x11.so.0 \
+      /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so
 
 COPY files/etc/ros-desktop/ /etc/ros-desktop/
 COPY files/etc/s6-overlay/ /etc/s6-overlay/

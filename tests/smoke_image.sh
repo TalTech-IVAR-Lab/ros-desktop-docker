@@ -74,6 +74,20 @@ run_as_user() {
     docker exec -u "${desktop_user}" "${container}" bash -lc "$1"
 }
 
+check_platform_identity() {
+    local actual_arch expected_arch
+    case "${platform}" in
+        linux/amd64) expected_arch=amd64 ;;
+        linux/arm64) expected_arch=arm64 ;;
+    esac
+    actual_arch=$(docker exec "${container}" dpkg --print-architecture)
+    if [[ ${actual_arch} != "${expected_arch}" ]]; then
+        printf 'platform mismatch: requested %s, guest reports %s\n' \
+            "${platform}" "${actual_arch}" >&2
+        return 1
+    fi
+}
+
 check_ros_environment() {
     run_as_user \
         "source /opt/ros/${distro}/setup.bash; \
@@ -115,6 +129,19 @@ check_ros_communication() {
     fi
 }
 
+wait_for_display() {
+    local attempt
+    for attempt in $(seq 1 60); do
+        if run_as_user \
+            'xdpyinfo -display "${DISPLAY:-:1}" >/dev/null 2>&1'; then
+            return 0
+        fi
+        sleep 1
+    done
+    printf 'X display did not become ready for RViz\n' >&2
+    return 1
+}
+
 check_rviz_stability() {
     local command status
     if [[ ${distro} == noetic ]]; then
@@ -140,6 +167,7 @@ docker volume create "${state_volume}" >/dev/null
 printf 'ROS_SMOKE_ROUND=initial distro=%s platform=%s\n' "${distro}" "${platform}"
 start_container
 wait_for_runtime
+check_platform_identity
 check_ros_environment
 
 # The descriptor-rooted helper runs as the desktop user and must fail closed on
@@ -189,6 +217,7 @@ docker exec -u "${desktop_user}" "${container}" zsh -ic \
     'test "${ROS_OVERLAY_SENTINEL}" = loaded && test "${ROS_DOTFILE_SENTINEL}" = loaded'
 
 check_ros_communication
+wait_for_display
 check_rviz_stability
 
 state_identity=$(docker exec "${container}" sha256sum \
@@ -204,6 +233,7 @@ docker rm -f "${container}" >/dev/null
 printf 'ROS_SMOKE_ROUND=recreated distro=%s platform=%s\n' "${distro}" "${platform}"
 start_container
 wait_for_runtime
+check_platform_identity
 check_ros_environment
 test "$(docker exec "${container}" cat /config/ros/ws_ivar_lab/.ci-persistence)" = "${distro}"
 test "$(docker exec "${container}" sha256sum \
