@@ -1,0 +1,21 @@
+# shellcheck shell=bash
+
+case "${ROS_DISTRO:-}" in
+    "noetic"|"humble"|"jazzy") ;;
+    *) return 0 ;;
+esac
+
+source "/opt/ros/${ROS_DISTRO}/setup.bash"
+
+export ROS_WS_NAME="${ROS_WS_NAME:-ws_ivar_lab}"
+export ROS_WS_PATH="${ROS_WS_PATH:-/config/ros/${ROS_WS_NAME}}"
+
+_taltech_desktop_uid=$(id -u "${DESKTOP_USER:-ivar}" 2>/dev/null || true)
+if [[ -n ${_taltech_desktop_uid} && ${EUID} -eq ${_taltech_desktop_uid} ]]; then
+    if [[ ${ROS_DISTRO:-} == "noetic" && -r "${ROS_WS_PATH}/devel/setup.bash" ]]; then
+        source "${ROS_WS_PATH}/devel/setup.bash"
+    elif [[ -r "${ROS_WS_PATH}/install/setup.bash" ]]; then
+        source "${ROS_WS_PATH}/install/setup.bash"
+    fi
+fi
+unset _taltech_desktop_uid
