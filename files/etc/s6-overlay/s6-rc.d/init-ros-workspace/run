@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bash
+set -euo pipefail
+
+desktop_user="${DESKTOP_USER:-ivar}"
+
+exec s6-setuidgid "${desktop_user}" \
+    /usr/local/libexec/taltech-init-ros-workspace.py \
+    --config-root /config \
+    --user "${desktop_user}" \
+    --workspace "${ROS_WS_NAME:-workspace}"

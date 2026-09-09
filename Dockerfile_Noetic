@@ -1,0 +1,117 @@
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+
+ARG BASE_IMAGE=taltechivarlab/ubuntu-desktop:20.04
+
+# The Focal compatibility base provides private libxkbcommon 1.5 for Selkies,
+# but deliberately builds it without the X11 companion. Focal's older system
+# libxkbcommon-x11 is not ABI-compatible with that private core library, which
+# makes Qt/XCB applications such as RViz crash during keyboard initialization.
+FROM ${BASE_IMAGE} AS xkbcommon_x11_builder
+
+ARG LIBXKBCOMMON_VERSION=1.5.0
+
+ADD --checksum=sha256:560f11c4bbbca10f495f3ef7d3a6aa4ca62b4f8fb0b52e7d459d18a26e46e017 \
+    https://xkbcommon.org/download/libxkbcommon-${LIBXKBCOMMON_VERSION}.tar.xz \
+    /tmp/libxkbcommon.tar.xz
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      bison \
+      build-essential \
+      libxcb-xkb-dev \
+      meson \
+      ninja-build \
+      pkg-config; \
+    mkdir -p /tmp/libxkbcommon-src; \
+    tar -xJf /tmp/libxkbcommon.tar.xz \
+      -C /tmp/libxkbcommon-src --strip-components=1; \
+    PKG_CONFIG_PATH=/opt/selkies-xkbcommon/lib/pkgconfig \
+      meson setup /tmp/libxkbcommon-build /tmp/libxkbcommon-src \
+        --prefix=/opt/selkies-xkbcommon \
+        --libdir=lib \
+        --buildtype=release \
+        -Denable-tools=false \
+        -Denable-x11=true \
+        -Denable-docs=false \
+        -Denable-wayland=false \
+        -Denable-xkbregistry=false; \
+    ninja -C /tmp/libxkbcommon-build
+
+FROM ${BASE_IMAGE}
+
+ARG BUILD_DATE
+ARG VERSION
+
+LABEL org.opencontainers.image.title="TalTech IVAR Lab ROS Desktop" \
+      org.opencontainers.image.description="ROS Noetic desktop development environment (upstream EOL)" \
+      org.opencontainers.image.source="https://github.com/TalTech-IVAR-Lab/ros-desktop-docker" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VERSION}"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    HOME=/home/${DESKTOP_USER} \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    ROS_DISTRO=noetic \
+    ROS_WS_NAME=workspace \
+    ROS_WS_PATH=/home/${DESKTOP_USER}/ros/workspace
+
+COPY files/ros.asc /usr/share/keyrings/ros-archive-keyring.asc
+
+RUN . /etc/os-release && \
+    if [ "${VERSION_CODENAME}" != "focal" ]; then \
+      echo "ROS Noetic requires Ubuntu Focal, found ${VERSION_CODENAME}" >&2; \
+      exit 64; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends locales && \
+    locale-gen en_US.UTF-8 && \
+    printf 'deb [arch=%s signed-by=/usr/share/keyrings/ros-archive-keyring.asc] http://packages.ros.org/ros/ubuntu focal main\n' \
+      "$(dpkg --print-architecture)" \
+      > /etc/apt/sources.list.d/ros1.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      python3-catkin-tools \
+      python3-osrf-pycommon \
+      python3-rosdep \
+      python3-rosinstall \
+      python3-rosinstall-generator \
+      python3-wstool \
+      ros-noetic-desktop-full \
+      ros-noetic-industrial-core \
+      ros-noetic-moveit && \
+    if [ ! -e /etc/ros/rosdep/sources.list.d/20-default.list ]; then rosdep init; fi && \
+    install -d -o "${DESKTOP_USER}" -g "${DESKTOP_USER}" -m 0755 /config/.ros && \
+    runuser -u "${DESKTOP_USER}" -- env HOME=/config rosdep update --include-eol-distros && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY --from=xkbcommon_x11_builder \
+    /tmp/libxkbcommon-build/libxkbcommon-x11.so.0.0.0 \
+    /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so.0.0.0
+
+RUN ln -sf libxkbcommon-x11.so.0.0.0 \
+      /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so.0 && \
+    ln -sf libxkbcommon-x11.so.0 \
+      /opt/selkies-xkbcommon/lib/libxkbcommon-x11.so
+
+COPY files/etc/ros-desktop/ /etc/ros-desktop/
+COPY files/etc/s6-overlay/ /etc/s6-overlay/
+COPY files/usr/local/libexec/ /usr/local/libexec/
+
+RUN printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/profile > /tmp/profile && \
+    cat /tmp/profile > /etc/profile && \
+    printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/bash.bashrc > /tmp/bash.bashrc && \
+    cat /tmp/bash.bashrc > /etc/bash.bashrc && \
+    printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/zsh/zshenv > /tmp/zshenv && \
+    cat /tmp/zshenv > /etc/zsh/zshenv && \
+    rm -f /tmp/profile /tmp/bash.bashrc /tmp/zshenv && \
+    printf '\n# TalTech ROS desktop environment\nsource /etc/ros-desktop/setup.bash\n' \
+      >> /etc/bash.bashrc && \
+    printf '\n# TalTech ROS desktop environment\nsource /etc/ros-desktop/setup.zsh\n' \
+      >> /etc/zsh/zshrc
+
+COPY files/ros_noetic_wallpaper.png /usr/share/backgrounds/ros/ros_noetic_wallpaper.png
