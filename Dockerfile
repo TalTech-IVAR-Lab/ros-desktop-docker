@@ -1,62 +1,72 @@
-FROM taltechivarlab/ubuntu-desktop:20.04
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
-# Set up sources
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+ARG UBUNTU_VERSION=22.04
+ARG BASE_IMAGE=taltechivarlab/ubuntu-desktop:${UBUNTU_VERSION}
+FROM ${BASE_IMAGE}
 
-# Set up keys
-RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+ARG BUILD_DATE
+ARG VERSION
+ARG UBUNTU_VERSION
+ARG ROS_DISTRO=humble
 
-# Update indexes
-RUN apt update -y
+LABEL org.opencontainers.image.title="TalTech IVAR Lab ROS Desktop" \
+      org.opencontainers.image.description="ROS 2 ${ROS_DISTRO} desktop development environment" \
+      org.opencontainers.image.source="https://github.com/TalTech-IVAR-Lab/ros-desktop-docker" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VERSION}"
 
-# Install desktop version of ROS Noetic
-RUN apt install -y ros-noetic-desktop-full
+ENV DEBIAN_FRONTEND=noninteractive \
+    HOME=/home/${DESKTOP_USER} \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    ROS_DISTRO=${ROS_DISTRO} \
+    ROS_WS_NAME=workspace \
+    ROS_WS_PATH=/home/${DESKTOP_USER}/ros/workspace
 
-# Install package building dependencies
-RUN apt install -y \
-  build-essential \
-  python3-rosinstall \
-  python3-rosinstall-generator \
-  python3-wstool \
-  python3-catkin-tools \
-  python3-osrf-pycommon
+RUN . /etc/os-release && \
+    pair="${ROS_DISTRO}:${VERSION_ID}" && \
+    case "${pair}" in \
+      humble:22.04|jazzy:24.04) ;; \
+      *) echo "Unsupported ROS/Ubuntu pair: ${pair}" >&2; exit 64 ;; \
+    esac
 
-# Install and initialize rosdep
-RUN apt install -y python3-rosdep
-RUN rosdep init
-RUN rosdep update
+COPY files/ros.asc /usr/share/keyrings/ros-archive-keyring.asc
 
-# Define ROS version
-ENV ROS_DISTRO="noetic"
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      locales && \
+    locale-gen en_US.UTF-8 && \
+    . /etc/os-release && \
+    printf 'deb [arch=%s signed-by=/usr/share/keyrings/ros-archive-keyring.asc] http://packages.ros.org/ros2/ubuntu %s main\n' \
+      "$(dpkg --print-architecture)" "${VERSION_CODENAME}" \
+      > /etc/apt/sources.list.d/ros2.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      python3-colcon-common-extensions \
+      python3-rosdep \
+      python3-vcstool \
+      "ros-${ROS_DISTRO}-desktop" \
+      "ros-${ROS_DISTRO}-moveit" && \
+    if [ ! -e /etc/ros/rosdep/sources.list.d/20-default.list ]; then rosdep init; fi && \
+    install -d -o "${DESKTOP_USER}" -g "${DESKTOP_USER}" -m 0755 /config/.ros && \
+    runuser -u "${DESKTOP_USER}" -- env HOME=/config rosdep update && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install MoveIt and ROS-Industrial Core
-RUN apt install -y ros-${ROS_DISTRO}-moveit ros-${ROS_DISTRO}-industrial-core
+COPY files/etc/ros-desktop/ /etc/ros-desktop/
+COPY files/etc/s6-overlay/ /etc/s6-overlay/
+COPY files/usr/local/libexec/ /usr/local/libexec/
 
-# Copy source files used to patch .zshrc and .bashrc
-ENV HOME="/config"
-ENV RC_FILE_PATCHES_PATH="${HOME}/rc_file_patches"
-COPY files/rc_file_patches/ ${RC_FILE_PATCHES_PATH}
-
-# Add command to source ROS to .zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.zsh >> ${HOME}/.zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_ros.bash >> ${HOME}/.bashrc
-
-# Create a default ROS workspace
-ENV ROS_WS_NAME="ws_ivar_lab"
-ENV ROS_WS_PATH="${HOME}/ros/${ROS_WS_NAME}"
-RUN mkdir -p ${ROS_WS_PATH}
-RUN wstool init ${ROS_WS_PATH}/src
-WORKDIR ${ROS_WS_PATH}
-RUN catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Release
-RUN catkin build
-
-# Add command to source the default workspace to .zshrc and .bashrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.zsh >> ${HOME}/.zshrc
-RUN cat ${RC_FILE_PATCHES_PATH}/source_default_ros_ws.bash >> ${HOME}/.bashrc
-
-# Clean up .*rc patch files
-RUN rm -rf ${RC_FILE_PATCHES_PATH}
-
-# Add ROS Noetic wallpaper and make it the default one
-COPY files/ros_noetic_wallpaper.png /usr/share/backgrounds/ros/ros_noetic_wallpaper.png
-RUN ln -snf /usr/share/backgrounds/ros/ros_noetic_wallpaper.png /usr/share/backgrounds/default.wallpaper
+RUN printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/profile > /tmp/profile && \
+    cat /tmp/profile > /etc/profile && \
+    printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/bash.bashrc > /tmp/bash.bashrc && \
+    cat /tmp/bash.bashrc > /etc/bash.bashrc && \
+    printf '. /etc/ros-desktop/root-home.sh\n' | cat - /etc/zsh/zshenv > /tmp/zshenv && \
+    cat /tmp/zshenv > /etc/zsh/zshenv && \
+    rm -f /tmp/profile /tmp/bash.bashrc /tmp/zshenv && \
+    printf '\n# TalTech ROS desktop environment\nsource /etc/ros-desktop/setup.bash\n' \
+      >> /etc/bash.bashrc && \
+    printf '\n# TalTech ROS desktop environment\nsource /etc/ros-desktop/setup.zsh\n' \
+      >> /etc/zsh/zshrc

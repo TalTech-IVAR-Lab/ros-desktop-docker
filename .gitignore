@@ -3,3 +3,5 @@ docker
 oci
 push
 bin
+__pycache__/
+*.py[cod]

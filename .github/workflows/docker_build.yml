@@ -1,58 +1,239 @@
-# This workflow is based on https://dev.to/cloudx/multi-arch-docker-images-the-easy-way-with-github-actions-4k54
-name: Docker Build
+name: "Build ROS desktop images"
+run-name: "Building ROS desktop images on '${{ github.head_ref || github.ref }}'"
 
-# Controls when the workflow will run
 on:
   workflow_dispatch:
   push:
     branches:
       - 'main'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'main'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: "Build ROS ${{ matrix.distro }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: noetic
+            ubuntu: 20.04
+            dockerfile: Dockerfile_Noetic
+            base_image: taltechivarlab/ubuntu-desktop@sha256:c95f92c071b6a0611bd2b6023623ec7b92b0896db00bf28db0e6c8e60599cb06
+          - distro: humble
+            ubuntu: 22.04
+            dockerfile: Dockerfile
+            base_image: taltechivarlab/ubuntu-desktop@sha256:40ffbbb5558dc32031fa248f6dc8502a050f34722d3b24e9fdcb01260edd6576
+          - distro: jazzy
+            ubuntu: 24.04
+            dockerfile: Dockerfile
+            base_image: taltechivarlab/ubuntu-desktop@sha256:02cd05a8bbf5aa93a77e44d109f6610efde2416143e3be26f434cd36cf72bfcf
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Run image contract tests
+        run: python3 -B -m unittest -v tests.test_image_contract
+
+      - name: Set image metadata
+        run: printf 'BUILD_DATE=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "${GITHUB_ENV}"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+      - name: Build amd64 smoke-test image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            ROS_DISTRO=${{ matrix.distro }}
+            UBUNTU_VERSION=${{ matrix.ubuntu }}
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            VERSION=${{ github.sha }}
+          load: true
+          push: false
+          tags: ros-desktop-smoke:${{ matrix.distro }}-amd64
+          cache-from: type=gha,scope=ros-${{ matrix.distro }}-amd64
+          cache-to: type=gha,mode=max,scope=ros-${{ matrix.distro }}-amd64
+
+      - name: Smoke-test amd64 image
+        run: tests/smoke_image.sh ros-desktop-smoke:${{ matrix.distro }}-amd64 ${{ matrix.distro }} linux/amd64
+
+      - name: Build arm64 smoke-test image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm64
+          build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            ROS_DISTRO=${{ matrix.distro }}
+            UBUNTU_VERSION=${{ matrix.ubuntu }}
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            VERSION=${{ github.sha }}
+          load: true
+          push: false
+          tags: ros-desktop-smoke:${{ matrix.distro }}-arm64
+          cache-from: type=gha,scope=ros-${{ matrix.distro }}-arm64
+          cache-to: type=gha,mode=max,scope=ros-${{ matrix.distro }}-arm64
+
+      - name: Smoke-test arm64 image
+        run: tests/smoke_image.sh ros-desktop-smoke:${{ matrix.distro }}-arm64 ${{ matrix.distro }} linux/arm64
+
+      - name: Login to Docker Hub for candidate push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Generate Docker metadata
-        id: docker_metadata
-        uses: docker/metadata-action@v3
-        with:
-          images: taltechivarlab/ros-desktop
-          flavor: |
-            latest=auto
-          tags: |
-            type=sha
-            type=raw,value=noetic,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push to Dockerhub
-        uses: docker/build-push-action@v3
+      - name: Build multi-architecture candidate
+        id: candidate
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.docker_metadata.outputs.tags }}
-          labels: ${{ steps.docker_metadata.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            ROS_DISTRO=${{ matrix.distro }}
+            UBUNTU_VERSION=${{ matrix.ubuntu }}
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            VERSION=${{ github.sha }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: taltechivarlab/ros-desktop:candidate-${{ github.sha }}-${{ matrix.distro }}
+          cache-from: |
+            type=gha,scope=ros-${{ matrix.distro }}-amd64
+            type=gha,scope=ros-${{ matrix.distro }}-arm64
+          cache-to: type=gha,mode=max,scope=ros-${{ matrix.distro }}-multiarch
+
+      - name: Record candidate digest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+        run: |
+          if [[ ! ${CANDIDATE_DIGEST} =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            printf 'invalid candidate digest: %s\n' "${CANDIDATE_DIGEST}" >&2
+            exit 1
+          fi
+          printf '%s\n' "${CANDIDATE_DIGEST}" > candidate-digest-${{ matrix.distro }}
+
+      - name: Smoke-test exact pushed candidate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+        run: |
+          candidate_ref="taltechivarlab/ros-desktop@${CANDIDATE_DIGEST}"
+          tests/smoke_image.sh "${candidate_ref}" ${{ matrix.distro }} linux/amd64
+          tests/smoke_image.sh "${candidate_ref}" ${{ matrix.distro }} linux/arm64
+
+      - name: Upload verified candidate digest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: candidate-digest-${{ matrix.distro }}
+          path: candidate-digest-${{ matrix.distro }}
+          if-no-files-found: error
+          retention-days: 7
+
+  promote:
+    name: "Promote verified ROS images"
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ros-desktop-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Download verified candidate digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: candidate-digest-*
+          path: candidate-digests
+          merge-multiple: true
+
+      - name: Load verified candidate digests
+        run: |
+          for distro in noetic humble jazzy; do
+            digest=$(tr -d '\n' < "candidate-digests/candidate-digest-${distro}")
+            if [[ ! ${digest} =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              printf 'invalid %s candidate digest: %s\n' "${distro}" "${digest}" >&2
+              exit 1
+            fi
+            printf '%s_digest=%s\n' "${distro}" "${digest}" >> "${GITHUB_ENV}"
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to Docker Hub for promotion
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Verify exact candidate manifests
+        run: |
+          python3 tests/verify_manifest.py \
+            taltechivarlab/ros-desktop@${noetic_digest} \
+            taltechivarlab/ros-desktop@${humble_digest} \
+            taltechivarlab/ros-desktop@${jazzy_digest}
+
+      - name: Promote release tags
+        run: |
+          docker buildx imagetools create \
+            --tag taltechivarlab/ros-desktop:noetic \
+            taltechivarlab/ros-desktop@${noetic_digest}
+          docker buildx imagetools create \
+            --tag taltechivarlab/ros-desktop:humble \
+            taltechivarlab/ros-desktop@${humble_digest}
+          docker buildx imagetools create \
+            --tag taltechivarlab/ros-desktop:jazzy \
+            --tag taltechivarlab/ros-desktop:latest \
+            taltechivarlab/ros-desktop@${jazzy_digest}
+
+      - name: Verify published manifests
+        run: |
+          python3 tests/verify_manifest.py \
+            taltechivarlab/ros-desktop:noetic \
+            taltechivarlab/ros-desktop:humble \
+            taltechivarlab/ros-desktop:jazzy \
+            taltechivarlab/ros-desktop:latest \
+            taltechivarlab/ros-desktop@${noetic_digest} \
+            taltechivarlab/ros-desktop@${humble_digest} \
+            taltechivarlab/ros-desktop@${jazzy_digest} \
+            --same-digest taltechivarlab/ros-desktop:noetic taltechivarlab/ros-desktop@${noetic_digest} \
+            --same-digest taltechivarlab/ros-desktop:humble taltechivarlab/ros-desktop@${humble_digest} \
+            --same-digest taltechivarlab/ros-desktop:jazzy taltechivarlab/ros-desktop@${jazzy_digest} \
+            --same-digest taltechivarlab/ros-desktop:latest taltechivarlab/ros-desktop@${jazzy_digest}
 
       - name: Update description on Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: peter-evans/dockerhub-description@v3
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
