@@ -144,6 +144,7 @@ jobs:
         run: |
           candidate_ref="taltechivarlab/ros-desktop@${CANDIDATE_DIGEST}"
           tests/smoke_image.sh "${candidate_ref}" ${{ matrix.distro }} linux/amd64
+          docker image rm "${candidate_ref}"
           tests/smoke_image.sh "${candidate_ref}" ${{ matrix.distro }} linux/arm64
 
       - name: Upload verified candidate digest
