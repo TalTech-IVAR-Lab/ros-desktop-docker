@@ -68,7 +68,7 @@ def initialize_workspace(
     config_root: Path,
     *,
     username: str,
-    workspace_name: str = "ws_ivar_lab",
+    workspace_name: str = "workspace",
 ) -> None:
     if (
         workspace_name in {".", ".."}
@@ -116,7 +116,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config-root", type=Path, default=Path("/config"))
     parser.add_argument("--user", default=os.environ.get("DESKTOP_USER", "ivar"))
     parser.add_argument(
-        "--workspace", default=os.environ.get("ROS_WS_NAME", "ws_ivar_lab")
+        "--workspace", default=os.environ.get("ROS_WS_NAME", "workspace")
     )
     return parser.parse_args()
 

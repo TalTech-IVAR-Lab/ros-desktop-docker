@@ -7,4 +7,4 @@ exec s6-setuidgid "${desktop_user}" \
     /usr/local/libexec/taltech-init-ros-workspace.py \
     --config-root /config \
     --user "${desktop_user}" \
-    --workspace "${ROS_WS_NAME:-ws_ivar_lab}"
+    --workspace "${ROS_WS_NAME:-workspace}"

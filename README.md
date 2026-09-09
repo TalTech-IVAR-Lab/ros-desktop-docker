@@ -21,9 +21,14 @@ workspace and automatic ROS environment sourcing. The ROS 2 images include:
 - Full ROS 2 Desktop installation
 - MoveIt 2, including the Pilz industrial motion planner used by the XRM demo
 - Colcon, vcstool, standard build tooling, and a populated rosdep cache
-- Persistent empty colcon workspace at `/config/ros/ws_ivar_lab`
+- Persistent empty colcon workspace at `/home/ivar/ros/workspace`
 - Automatic ROS and workspace sourcing in interactive Bash and Zsh shells
-- `ROS_WS_NAME=ws_ivar_lab` and `ROS_WS_PATH=/config/ros/ws_ivar_lab`
+- `ROS_WS_NAME=workspace` and `ROS_WS_PATH=/home/ivar/ros/workspace`
+
+The base image exposes the conventional home `/home/ivar`, backed by the
+persistent `/config` volume. Thus the workspace is stored persistently at
+`/config/ros/workspace` while tools and shells use its normal home-directory
+path.
 
 The Noetic image includes ROS Desktop Full, MoveIt, ROS-Industrial Core,
 catkin-tools, rosdep, rosinstall, and wstool. Noetic remains directly

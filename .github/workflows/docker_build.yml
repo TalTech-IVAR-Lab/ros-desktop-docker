@@ -30,15 +30,15 @@ jobs:
           - distro: noetic
             ubuntu: 20.04
             dockerfile: Dockerfile_Noetic
-            base_image: taltechivarlab/ubuntu-desktop@sha256:99b0103f5e7485b2b800f1bcdc104b3ea6e23969e5b3e374fdf06143fb99ffb7
+            base_image: taltechivarlab/ubuntu-desktop@sha256:c95f92c071b6a0611bd2b6023623ec7b92b0896db00bf28db0e6c8e60599cb06
           - distro: humble
             ubuntu: 22.04
             dockerfile: Dockerfile
-            base_image: taltechivarlab/ubuntu-desktop@sha256:3baefac635d465bc9fad7f183b013a01c2441d5744048d579aa90f807a41104b
+            base_image: taltechivarlab/ubuntu-desktop@sha256:40ffbbb5558dc32031fa248f6dc8502a050f34722d3b24e9fdcb01260edd6576
           - distro: jazzy
             ubuntu: 24.04
             dockerfile: Dockerfile
-            base_image: taltechivarlab/ubuntu-desktop@sha256:02e39dc64471028776f9143c23ff4780f12dc5297fc47b85eefb0c2c16184e90
+            base_image: taltechivarlab/ubuntu-desktop@sha256:02cd05a8bbf5aa93a77e44d109f6610efde2416143e3be26f434cd36cf72bfcf
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

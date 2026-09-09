@@ -40,7 +40,7 @@ wait_for_runtime() {
             printf 'container stopped during startup\n' >&2
             return 1
         fi
-        if docker exec "${container}" test -d /config/ros/ws_ivar_lab/src 2>/dev/null; then
+        if docker exec "${container}" test -d /config/ros/workspace/src 2>/dev/null; then
             unauthenticated=$(docker exec "${container}" curl --insecure --silent \
                 --output /dev/null --write-out '%{http_code}' \
                 https://127.0.0.1:3001/ 2>/dev/null || true)
@@ -86,6 +86,26 @@ check_platform_identity() {
             "${platform}" "${actual_arch}" >&2
         return 1
     fi
+}
+
+check_home_and_workspace_contract() {
+    local backing_identity public_identity
+
+    docker exec -u "${desktop_user}" "${container}" bash -lc \
+        'test "${HOME}" = "/home/${DESKTOP_USER}"; \
+         test "${ROS_WS_NAME}" = workspace; \
+         test "${ROS_WS_PATH}" = "/home/${DESKTOP_USER}/ros/workspace"'
+    test "$(docker exec "${container}" getent passwd "${desktop_user}" | cut -d: -f6)" \
+        = "/home/${desktop_user}"
+    test "$(docker exec "${container}" readlink "/home/${desktop_user}")" = /config
+    docker exec "${container}" test -d /config/ros/workspace/src
+    docker exec "${container}" test -d "/home/${desktop_user}/ros/workspace/src"
+
+    backing_identity=$(docker exec "${container}" stat -Lc '%d:%i' \
+        /config/ros/workspace/src)
+    public_identity=$(docker exec "${container}" stat -Lc '%d:%i' \
+        "/home/${desktop_user}/ros/workspace/src")
+    test "${public_identity}" = "${backing_identity}"
 }
 
 check_ros_environment() {
@@ -168,6 +188,7 @@ printf 'ROS_SMOKE_ROUND=initial distro=%s platform=%s\n' "${distro}" "${platform
 start_container
 wait_for_runtime
 check_platform_identity
+check_home_and_workspace_contract
 check_ros_environment
 
 # The descriptor-rooted helper runs as the desktop user and must fail closed on
@@ -193,11 +214,11 @@ else
 fi
 
 run_as_user \
-    "mkdir -p /config/ros/ws_ivar_lab/${overlay}; \
+    "mkdir -p /home/${desktop_user}/ros/workspace/${overlay}; \
      printf '%s\\n' 'export ROS_OVERLAY_SENTINEL=loaded' \
-       > /config/ros/ws_ivar_lab/${overlay}/setup.bash; \
+       > /home/${desktop_user}/ros/workspace/${overlay}/setup.bash; \
      printf '%s\\n' 'export ROS_OVERLAY_SENTINEL=loaded' \
-       > /config/ros/ws_ivar_lab/${overlay}/setup.zsh; \
+       > /home/${desktop_user}/ros/workspace/${overlay}/setup.zsh; \
      printf '%s\\n' 'export ROS_DOTFILE_SENTINEL=loaded' > /config/.bashrc; \
      printf '%s\\n' 'export ROS_DOTFILE_SENTINEL=loaded' > /config/.bash_profile; \
      printf '%s\\n' 'export ROS_DOTFILE_SENTINEL=loaded' > /config/.zshenv; \
@@ -227,15 +248,16 @@ if [[ ! ${state_identity} =~ ^[0-9a-f]{64}$ ]]; then
     exit 1
 fi
 run_as_user \
-    "printf '%s\\n' '${distro}' > /config/ros/ws_ivar_lab/.ci-persistence"
+    "printf '%s\\n' '${distro}' > /home/${desktop_user}/ros/workspace/.ci-persistence"
 docker rm -f "${container}" >/dev/null
 
 printf 'ROS_SMOKE_ROUND=recreated distro=%s platform=%s\n' "${distro}" "${platform}"
 start_container
 wait_for_runtime
 check_platform_identity
+check_home_and_workspace_contract
 check_ros_environment
-test "$(docker exec "${container}" cat /config/ros/ws_ivar_lab/.ci-persistence)" = "${distro}"
+test "$(docker exec "${container}" cat /config/ros/workspace/.ci-persistence)" = "${distro}"
 test "$(docker exec "${container}" sha256sum \
     /var/lib/taltech-desktop/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1)" = "${state_identity}"
 check_ros_communication

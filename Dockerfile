@@ -17,12 +17,12 @@ LABEL org.opencontainers.image.title="TalTech IVAR Lab ROS Desktop" \
       org.opencontainers.image.revision="${VERSION}"
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    HOME=/config \
+    HOME=/home/${DESKTOP_USER} \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     ROS_DISTRO=${ROS_DISTRO} \
-    ROS_WS_NAME=ws_ivar_lab \
-    ROS_WS_PATH=/config/ros/ws_ivar_lab
+    ROS_WS_NAME=workspace \
+    ROS_WS_PATH=/home/${DESKTOP_USER}/ros/workspace
 
 RUN . /etc/os-release && \
     pair="${ROS_DISTRO}:${VERSION_ID}" && \

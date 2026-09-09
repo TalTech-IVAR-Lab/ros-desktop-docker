@@ -88,14 +88,14 @@ class RosImageContractTests(unittest.TestCase):
             result = self.run_workspace_init(config_root)
 
             self.assertEqual(0, result.returncode, result.stderr)
-            for relative in ("ros", "ros/ws_ivar_lab", "ros/ws_ivar_lab/src"):
+            for relative in ("ros", "ros/workspace", "ros/workspace/src"):
                 path = config_root / relative
                 self.assertTrue(path.is_dir(), path)
                 self.assertFalse(path.is_symlink(), path)
                 self.assertEqual(0o755, stat.S_IMODE(path.stat().st_mode))
 
     def test_workspace_initializer_rejects_symlinks_at_every_component(self) -> None:
-        for symlink_component in ("ros", "ws_ivar_lab", "src"):
+        for symlink_component in ("ros", "workspace", "src"):
             with self.subTest(symlink_component=symlink_component):
                 with tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)
@@ -109,7 +109,7 @@ class RosImageContractTests(unittest.TestCase):
                         parent = config_root / "ros"
                         parent.mkdir()
                     if symlink_component == "src":
-                        parent = parent / "ws_ivar_lab"
+                        parent = parent / "workspace"
                         parent.mkdir()
                     (parent / symlink_component).symlink_to(
                         protected, target_is_directory=True
@@ -124,7 +124,7 @@ class RosImageContractTests(unittest.TestCase):
     def test_workspace_initializer_does_not_repermission_existing_directories(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config_root = Path(directory) / "config"
-            workspace_src = config_root / "ros" / "ws_ivar_lab" / "src"
+            workspace_src = config_root / "ros" / "workspace" / "src"
             workspace_src.mkdir(parents=True)
             for path in (config_root / "ros", workspace_src.parent, workspace_src):
                 path.chmod(0o700)
@@ -253,6 +253,50 @@ class RosImageContractTests(unittest.TestCase):
             noetic,
         )
 
+    def test_runtime_home_and_workspace_follow_the_published_base_contract(self) -> None:
+        for dockerfile in (DOCKERFILE, ROOT / "Dockerfile_Noetic"):
+            content = dockerfile.read_text()
+            self.assertIn("HOME=/home/${DESKTOP_USER}", content)
+            self.assertIn("ROS_WS_NAME=workspace", content)
+            self.assertIn(
+                "ROS_WS_PATH=/home/${DESKTOP_USER}/ros/workspace", content
+            )
+
+        for setup_path in (
+            ROOT / "files" / "etc" / "ros-desktop" / "setup.bash",
+            ROOT / "files" / "etc" / "ros-desktop" / "setup.zsh",
+        ):
+            setup = setup_path.read_text()
+            self.assertIn('ROS_WS_NAME="${ROS_WS_NAME:-workspace}"', setup)
+            self.assertIn(
+                'ROS_WS_PATH="${ROS_WS_PATH:-/home/${DESKTOP_USER:-ivar}/ros/${ROS_WS_NAME}}"',
+                setup,
+            )
+
+        init_run = (
+            ROOT
+            / "files"
+            / "etc"
+            / "s6-overlay"
+            / "s6-rc.d"
+            / "init-ros-workspace"
+            / "run"
+        ).read_text()
+        self.assertIn('--workspace "${ROS_WS_NAME:-workspace}"', init_run)
+        self.assertNotIn("ws_ivar_lab", "\n".join(
+            path.read_text()
+            for path in (
+                DOCKERFILE,
+                ROOT / "Dockerfile_Noetic",
+                ROOT / "README.md",
+                ROOT / "tests" / "smoke_image.sh",
+                ROOT / "files" / "etc" / "ros-desktop" / "setup.bash",
+                ROOT / "files" / "etc" / "ros-desktop" / "setup.zsh",
+                ROOT / "files" / "etc" / "s6-overlay" / "s6-rc.d" / "init-ros-workspace" / "run",
+                WORKSPACE_INIT,
+            )
+        ))
+
     def test_derived_images_replace_inherited_oci_revision_metadata(self) -> None:
         for dockerfile in (DOCKERFILE, ROOT / "Dockerfile_Noetic"):
             content = dockerfile.read_text()
@@ -374,19 +418,19 @@ class RosImageContractTests(unittest.TestCase):
                     "noetic",
                     "20.04",
                     "Dockerfile_Noetic",
-                    "taltechivarlab/ubuntu-desktop@sha256:99b0103f5e7485b2b800f1bcdc104b3ea6e23969e5b3e374fdf06143fb99ffb7",
+                    "taltechivarlab/ubuntu-desktop@sha256:c95f92c071b6a0611bd2b6023623ec7b92b0896db00bf28db0e6c8e60599cb06",
                 ),
                 (
                     "humble",
                     "22.04",
                     "Dockerfile",
-                    "taltechivarlab/ubuntu-desktop@sha256:3baefac635d465bc9fad7f183b013a01c2441d5744048d579aa90f807a41104b",
+                    "taltechivarlab/ubuntu-desktop@sha256:40ffbbb5558dc32031fa248f6dc8502a050f34722d3b24e9fdcb01260edd6576",
                 ),
                 (
                     "jazzy",
                     "24.04",
                     "Dockerfile",
-                    "taltechivarlab/ubuntu-desktop@sha256:02e39dc64471028776f9143c23ff4780f12dc5297fc47b85eefb0c2c16184e90",
+                    "taltechivarlab/ubuntu-desktop@sha256:02cd05a8bbf5aa93a77e44d109f6610efde2416143e3be26f434cd36cf72bfcf",
                 ),
             ],
             rows,
@@ -454,6 +498,14 @@ class RosImageContractTests(unittest.TestCase):
         self.assertIn('dpkg --print-architecture', smoke)
         self.assertIn('linux/amd64) expected_arch=amd64', smoke)
         self.assertIn('linux/arm64) expected_arch=arm64', smoke)
+        self.assertIn('test "${HOME}" = "/home/${DESKTOP_USER}"', smoke)
+        self.assertIn('test "${ROS_WS_NAME}" = workspace', smoke)
+        self.assertIn(
+            'test "${ROS_WS_PATH}" = "/home/${DESKTOP_USER}/ros/workspace"', smoke
+        )
+        self.assertIn('readlink "/home/${desktop_user}"', smoke)
+        self.assertIn('/config/ros/workspace/src', smoke)
+        self.assertIn('/home/${desktop_user}/ros/workspace/src', smoke)
         self.assertIn(
             "check_ros_communication\nwait_for_display\ncheck_rviz_stability", smoke
         )
