@@ -510,6 +510,24 @@ class RosImageContractTests(unittest.TestCase):
             "check_ros_communication\nwait_for_display\ncheck_rviz_stability", smoke
         )
 
+    def test_ci_releases_digest_reference_between_platform_smokes(self) -> None:
+        workflow = WORKFLOW.read_text()
+        step = workflow.split("- name: Smoke-test exact pushed candidate", 1)[1]
+        step = step.split("- name: Upload verified candidate digest", 1)[0]
+
+        amd64_smoke = (
+            'tests/smoke_image.sh "${candidate_ref}" '
+            '${{ matrix.distro }} linux/amd64'
+        )
+        arm64_smoke = (
+            'tests/smoke_image.sh "${candidate_ref}" '
+            '${{ matrix.distro }} linux/arm64'
+        )
+        release_digest = 'docker image rm "${candidate_ref}"'
+
+        self.assertLess(step.index(amd64_smoke), step.index(release_digest))
+        self.assertLess(step.index(release_digest), step.index(arm64_smoke))
+
     def test_ci_promotes_only_after_all_candidates_pass(self) -> None:
         workflow = WORKFLOW.read_text()
         publish_condition = (
