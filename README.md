@@ -2,8 +2,8 @@
 
 [![ROS version](https://img.shields.io/badge/ROS-Noetic%20%7C%20Humble%20%7C%20Jazzy-informational?logo=ros)](https://docs.ros.org/)
 [![Ubuntu version](https://img.shields.io/badge/Ubuntu-20.04%20%7C%2022.04%20%7C%2024.04-informational?logo=ubuntu)](https://releases.ubuntu.com/)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ros-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ros-desktop-docker/actions)
 [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/taltechivarlab/ros-desktop?logo=docker)](https://hub.docker.com/r/taltechivarlab/ros-desktop)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/TalTech-IVAR-Lab/ros-desktop-docker/docker_build.yml?branch=main&logo=GitHub)](https://github.com/TalTech-IVAR-Lab/ros-desktop-docker/actions)
 
 > Based on the `taltechivarlab/ubuntu-desktop:20.04`, `:22.04`, and `:24.04` images by [TalTech IVAR Lab][taltech_ivar_lab_github]
 
